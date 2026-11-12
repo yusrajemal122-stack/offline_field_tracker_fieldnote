@@ -1,0 +1,12 @@
+{
+  "name": "Fieldnote — Offline Issue Tracker",
+  "short_name": "Fieldnote",
+  "description": "Reliable issue reporting for the field, with or without signal.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7f9fc",
+  "theme_color": "#1769c2",
+  "icons": [
+    { "src": "/fieldnote-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

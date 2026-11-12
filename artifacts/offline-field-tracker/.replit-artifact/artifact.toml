@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Offline Field Issue Tracker"
+description = "A mobile-friendly field reporting app that stores infrastructure reports offline, synchronizes them safely to a server, and tracks report status and activity."
+version = "1.0.0"
+id = "artifacts/offline-field-tracker"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 19430
+
+[services.development]
+run = "pnpm --filter @workspace/offline-field-tracker run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/offline-field-tracker", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/offline-field-tracker/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "19430"
+BASE_PATH = "/"

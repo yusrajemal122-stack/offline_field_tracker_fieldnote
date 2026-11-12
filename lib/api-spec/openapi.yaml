@@ -10,6 +10,10 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: reports
+    description: Field issue reports and synchronization
+  - name: activity
+    description: Report activity history
 paths:
   /healthz:
     get:
@@ -24,6 +28,114 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /reports:
+    get:
+      operationId: getReports
+      tags: [reports]
+      summary: List synchronized reports
+      responses:
+        "200":
+          description: Reports currently stored by the server
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Report"
+  /reports/{id}/sync:
+    put:
+      operationId: syncReport
+      tags: [reports]
+      summary: Synchronize one report idempotently
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReportSyncInput"
+      responses:
+        "200":
+          description: Existing or newly synchronized report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Report"
+        "400":
+          description: Invalid report or activity data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /reports/{id}/status:
+    patch:
+      operationId: updateReportStatus
+      tags: [reports]
+      summary: Change a report status
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReportStatusInput"
+      responses:
+        "200":
+          description: Updated report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Report"
+        "400":
+          description: Invalid status transition
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: Report not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /dashboard:
+    get:
+      operationId: getDashboard
+      tags: [reports]
+      summary: Summarize synchronized reports
+      responses:
+        "200":
+          description: Server-side report totals
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+  /activity:
+    get:
+      operationId: getActivity
+      tags: [activity]
+      summary: List report activity
+      responses:
+        "200":
+          description: Activity events ordered newest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Activity"
 components:
   schemas:
     HealthStatus:
@@ -33,4 +145,133 @@ components:
           type: string
       required:
         - status
+    Report:
+      type: object
+      required:
+        - id
+        - category
+        - description
+        - location
+        - priority
+        - status
+        - createdAt
+        - updatedAt
+        - syncState
+      properties:
+        id:
+          type: string
+          format: uuid
+        category:
+          type: string
+          minLength: 1
+        description:
+          type: string
+          minLength: 1
+        location:
+          type: string
+          minLength: 1
+        priority:
+          type: string
+          enum: [Low, Medium, High, Critical]
+        status:
+          type: string
+          enum: [Draft, Submitted, Assigned, In Progress, Resolved, Rejected]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        syncState:
+          type: string
+          enum: [pending, synchronized, failed]
+    Activity:
+      type: object
+      required: [id, reportId, kind, message, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        reportId:
+          type: string
+          format: uuid
+        kind:
+          type: string
+          enum: [created, sync_attempted, sync_failed, synchronized, status_changed]
+        message:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    ReportSyncActivity:
+      type: object
+      required: [id, kind, message, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        kind:
+          type: string
+          enum: [created, sync_attempted, sync_failed, synchronized, status_changed]
+        message:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    ReportSyncInput:
+      type: object
+      required: [category, description, location, priority, status, createdAt, updatedAt]
+      properties:
+        category:
+          type: string
+          minLength: 1
+        description:
+          type: string
+          minLength: 1
+        location:
+          type: string
+          minLength: 1
+        priority:
+          type: string
+          enum: [Low, Medium, High, Critical]
+        status:
+          type: string
+          enum: [Draft, Submitted, Assigned, In Progress, Resolved, Rejected]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        activities:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReportSyncActivity"
+    ReportStatusInput:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [Draft, Submitted, Assigned, In Progress, Resolved, Rejected]
+        activity:
+          $ref: "#/components/schemas/ReportSyncActivity"
+    DashboardSummary:
+      type: object
+      required: [totalReports, pendingReports, synchronizedReports, failedReports]
+      properties:
+        totalReports:
+          type: integer
+        pendingReports:
+          type: integer
+        synchronizedReports:
+          type: integer
+        failedReports:
+          type: integer
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
 
