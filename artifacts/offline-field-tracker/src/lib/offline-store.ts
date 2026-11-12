@@ -4,6 +4,7 @@ const DB_NAME = 'field-issue-tracker';
 const DB_VERSION = 1;
 const REPORTS = 'reports';
 const ACTIVITY = 'activity';
+const SYNC_STATES = new Set(['pending', 'synchronized', 'failed']);
 
 function openDatabase(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -42,13 +43,21 @@ async function transact<T>(stores: string[], mode: IDBTransactionMode, work: (tx
 }
 
 export async function readReports(): Promise<Report[]> {
-  const rows = await transact<Report[]> ([REPORTS], 'readonly', tx => tx.objectStore(REPORTS).getAll());
-  return rows.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const rows = await transact<Report[]>([REPORTS], 'readonly', tx => tx.objectStore(REPORTS).getAll());
+  return rows
+    .map(report => ({
+      ...report,
+      // Older or partially written local records must remain visible and queued.
+      syncState: SYNC_STATES.has(String((report as Report & { syncState?: unknown }).syncState))
+        ? report.syncState
+        : 'pending',
+    }))
+    .sort((a, b) => new Date(String(b.createdAt)).getTime() - new Date(String(a.createdAt)).getTime());
 }
 
 export async function readActivity(): Promise<Activity[]> {
   const rows = await transact<Activity[]>([ACTIVITY], 'readonly', tx => tx.objectStore(ACTIVITY).getAll());
-  return rows.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  return rows.sort((a, b) => new Date(String(b.createdAt)).getTime() - new Date(String(a.createdAt)).getTime());
 }
 
 export async function writeReport(report: Report): Promise<void> {

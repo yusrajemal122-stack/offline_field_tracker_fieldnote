@@ -77,6 +77,26 @@ test("repeating the same report sync does not create a duplicate or overwrite it
   }
 });
 
+test("a client-confirmed sync event is stored once by its stable event ID", () => {
+  const store = createReportStore(":memory:");
+  const syncEvent = {
+    id: "5ed8d344-ad97-4d2e-80cf-d44b322347de",
+    kind: "synchronized" as const,
+    message: "The server confirmed receipt of this report.",
+    createdAt,
+  };
+  try {
+    store.syncReport(reportId, reportInput({ activities: [syncEvent] }));
+    store.syncReport(reportId, reportInput({ activities: [syncEvent] }));
+
+    const confirmations = store.listActivity().filter((item) => item.kind === "synchronized");
+    assert.equal(confirmations.length, 1);
+    assert.equal(confirmations[0]?.id, syncEvent.id);
+  } finally {
+    store.close();
+  }
+});
+
 test("status changes persist activity and invalid transitions are rejected", () => {
   const store = createReportStore(":memory:");
   try {

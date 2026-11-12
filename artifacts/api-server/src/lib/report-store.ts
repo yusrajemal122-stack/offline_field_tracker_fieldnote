@@ -163,12 +163,17 @@ export function createReportStore(databasePath: string) {
           addActivity(id, entry);
         }
 
-        addActivity(id, {
-          id: randomUUID(),
-          kind: "synchronized",
-          message: "Report synchronized with the server.",
-          createdAt: new Date(),
-        });
+        const hasClientConfirmation = (input.activities ?? []).some(
+          (entry) => entry.kind === "synchronized",
+        );
+        if (!hasClientConfirmation) {
+          addActivity(id, {
+            id: randomUUID(),
+            kind: "synchronized",
+            message: "Report synchronized with the server.",
+            createdAt: new Date(),
+          });
+        }
 
         database.exec("COMMIT");
         return reportFromRow(existing);

@@ -56,9 +56,9 @@ pnpm run typecheck
 ## How synchronization works
 
 1. The browser creates a UUID and commits the report and its “created” activity to IndexedDB before showing it as saved.
-2. A connection event or a manual retry starts synchronization. Each attempt is recorded locally first.
+2. A connection event or a manual retry starts synchronization. Each attempt is recorded locally first. Temporary network and server errors retry with an increasing delay while the browser remains online.
 3. The browser sends the report to `PUT /api/reports/{id}/sync`. SQLite makes the report UUID a primary key, so repeating a request cannot create a second report or overwrite an already stored report.
-4. Once the server confirms the report, the browser marks it synchronized locally. If a request fails, its report and failure history remain on the device and can be retried later.
+4. Only a successful server response marks the report synchronized. A failed request keeps the report and failure history on the device; transient failures are retried automatically, and other failures can be retried manually.
 5. Report status changes use `PATCH /api/reports/{id}/status`. The server checks every transition and records the change in the activity table.
 
 The service worker caches the app shell and static files for offline reopening; report data itself stays in IndexedDB. API responses are not used as the only copy of a report.
@@ -76,9 +76,10 @@ The service worker caches the app shell and static files for offline reopening; 
 
 - [ ] Open the app once while online, then reload and confirm the shell loads.
 - [ ] Add a report and confirm it appears in the list and activity history.
-- [ ] Turn on airplane mode, create another report, refresh the page, and confirm it is still present as pending.
+- [ ] Turn on airplane mode, create another report, refresh the page, and confirm it is still present and the Pending counter increases.
 - [ ] Turn connectivity back on and confirm the report becomes synchronized without creating a duplicate.
-- [ ] Stop the API while connected, create or retry a report, and confirm it is marked failed rather than disappearing; restart the API and retry.
+- [ ] Stop the API while connected, create or retry a report, and confirm it remains saved; restart the API without toggling connectivity and confirm automatic retry succeeds.
+- [ ] Confirm activity rows show Attempted, Failed, and Synchronized according to each event, even after a failed report later succeeds.
 - [ ] Try each allowed status transition and confirm the final statuses cannot move backward.
 - [ ] Confirm the dashboard totals reflect all locally stored reports and their sync states.
 - [ ] Open the app at tablet width and confirm the form, list, and controls remain usable.

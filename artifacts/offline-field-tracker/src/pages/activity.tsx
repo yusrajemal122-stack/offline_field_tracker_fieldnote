@@ -3,7 +3,7 @@ import { getGetActivityQueryKey, useGetActivity } from '@workspace/api-client-re
 import { Activity, AlertTriangle, CheckCircle2, CircleDot, CloudOff, History, RefreshCw, Send, SlidersHorizontal } from 'lucide-react';
 import { useTracker } from '@/hooks/use-tracker';
 import { formatDate, shortId } from '@/lib/report-utils';
-import { SyncBadge, StatusPill } from '@/components/tracker-ui';
+import { StatusPill } from '@/components/tracker-ui';
 import type { Activity as ActivityRecord } from '@workspace/api-client-react';
 
 const filterItems = ['Everything', 'Reports created', 'Sync events', 'Status changes'] as const;
@@ -22,6 +22,17 @@ function eventStyle(kind: ActivityRecord['kind']) {
   if (kind === 'status_changed') return 'event-status';
   if (kind === 'sync_attempted') return 'event-attempt';
   return 'event-created';
+}
+function SyncEventOutcome({ kind }: { kind: ActivityRecord['kind'] }) {
+  const result = kind === 'sync_attempted'
+    ? { label: 'Attempted', style: 'event-attempt' }
+    : kind === 'sync_failed'
+      ? { label: 'Failed', style: 'event-failed' }
+      : kind === 'synchronized'
+        ? { label: 'Synchronized', style: 'event-success' }
+        : null;
+  if (!result) return null;
+  return <span data-testid={`activity-sync-outcome-${kind}`} className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-bold ${result.style}`}>{result.label}</span>;
 }
 function matches(item: ActivityRecord, filter: ActivityFilter): boolean {
   if (filter === 'Everything') return true;
@@ -61,7 +72,8 @@ export default function ActivityPage() {
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <span className="font-mono-ui text-[9px] tracking-wide text-muted-foreground">FN-{shortId(entry.reportId)}</span>
                 {report && <><span className="h-1 w-1 rounded-full bg-border" /><span className="text-[10px] font-semibold text-accent">{report.category}</span><span className="text-[10px] text-muted-foreground">{report.location}</span></>}
-                {report && <><StatusPill status={report.status} /><SyncBadge state={report.syncState} /></>}
+                {report && <StatusPill status={report.status} />}
+                <SyncEventOutcome kind={entry.kind} />
               </div>
             </div>
           </article>;
